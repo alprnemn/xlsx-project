@@ -4,6 +4,7 @@ import pandas as pd
 import io
 from utils import (fetch_df_from_external_api,
                    concat_and_filter_dataframes,
+                    get_labelids_from_df
                     )
 
 
@@ -28,6 +29,12 @@ async def upload_csv_file(file: UploadFile = File(...)):
 
     # Concatenate dataframes and filter which does not contain ['hu'] values and duplicated values based on kurzname
     df_result = concat_and_filter_dataframes(df_external_api, df_client)
+
+    # get label ids from label ids column using dataframe before make request for each label ids to get color codes
+    label_ids = get_labelids_from_df(df_result)
+
+
+
 
 
 

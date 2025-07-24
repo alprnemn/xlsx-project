@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 import requests
-from typing import Dict, List
+from typing import Dict, List, Optional
 from cfg import config
 
 _token_cache = {
@@ -77,4 +77,34 @@ def concat_and_filter_dataframes(df_1: pd.DataFrame, df_2: pd.DataFrame) -> pd.D
 
 
     return df_concatenated
+
+def clean_label_id(val):
+    """
+    This function extracts the first labelId from the 'labelIds' value.
+    - If the value is a string, it splits by comma and returns the first part.
+    - If the value is NaN, it returns None.
+    """
+    if pd.isnull(val):
+        return None
+    if isinstance(val, str):
+        return val.split(',')[0].strip()
+    return None
+
+def get_labelids_from_df(df:pd.DataFrame) -> List[Optional[str]] :
+    """
+    This function gets label ids from labelIds column if label id exists and returns list of label ids
+    """
+
+    if 'labelIds' not in df.columns:
+        raise ValueError("DataFrame must contain a 'labelIds' column.")
+
+    # extract label ids from labelIds column with clean operation
+    label_ids = df['labelIds'].dropna().apply(clean_label_id)
+
+    # get label ids as a list after clean opearation
+    unique_label_ids = label_ids.dropna().unique()
+
+
+    return list(unique_label_ids)
+
 
