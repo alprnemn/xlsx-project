@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 import requests
-from typing import Dict
+from typing import Dict, List
 from cfg import config
 
 _token_cache = {
@@ -36,7 +36,7 @@ def get_access_token() -> str :
     except Exception as e:
         raise RuntimeError("Error occurred while getting access token") from e
 
-def fetch_data_from_external_api() -> pd.DataFrame:
+def fetch_df_from_external_api() -> pd.DataFrame:
     """
     Fetch vehicle data from external Baubuddy API using Bearer access token and returns pd dataframe.
     """
@@ -56,4 +56,25 @@ def fetch_data_from_external_api() -> pd.DataFrame:
         return pd.DataFrame(response.json())
     except Exception as e:
         raise RuntimeError("Error occurred while getting external data") from e
+
+def concat_and_filter_dataframes(df_1: pd.DataFrame, df_2: pd.DataFrame) -> pd.DataFrame:
+    """
+    This function concatenates two dataframes, removes duplicates based on 'kurzname'(to be unique),
+    filters out rows where the 'hu' column is missing and returns dataframe.
+    """
+
+    # update data with only substantial columns
+    df_1 = df_1[['rnr','gruppe','kurzname','langtext','info','lagerort','labelIds','hu']]
+
+    # concat dataframes
+    df_concatenated = pd.concat([df_1, df_2], ignore_index=True)
+
+    # drop duplicates based on kurzname
+    df_concatenated = df_concatenated.drop_duplicates(subset='kurzname', ignore_index=True)
+
+    # drop missing values at 'hu' column
+    df_concatenated.dropna(subset=['hu'], inplace=True)
+
+
+    return df_concatenated
 

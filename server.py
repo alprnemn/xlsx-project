@@ -2,7 +2,10 @@ from fastapi import FastAPI,UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import io
-from utils import fetch_data_from_external_api
+from utils import (fetch_df_from_external_api,
+                   concat_and_filter_dataframes,
+                    )
+
 
 app = FastAPI()
 
@@ -17,16 +20,15 @@ app.add_middleware(
 @app.post("/upload")
 async def upload_csv_file(file: UploadFile = File(...)):
 
+    # Convert csv file f rom client to data frame
     df_client = pd.read_csv(io.BytesIO(await file.read()), sep=";")
 
-    df_external_api = fetch_data_from_external_api()
+    # Fetch external data and convert to dataframe
+    df_external_api = fetch_df_from_external_api()
 
-    print("client data type",type(df_client))
-    print("df from client",df_client.iloc[0])
-    print("---------")
-    print("external source data type",type(df_external_api))
-    print("df from external source",df_external_api.iloc[1])
+    # Concatenate dataframes and filter which does not contain ['hu'] values and duplicated values based on kurzname
+    df_result = concat_and_filter_dataframes(df_external_api, df_client)
 
-    return {
-        "size": "success"
-    }
+
+
+    return {"message: " : "sv is running.."}
