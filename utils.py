@@ -8,6 +8,7 @@ _token_cache = {
     "access_token": None,
 }
 
+
 def get_access_token() -> str :
     """
     Returns a cached access token or fetches a new one if not cached.
@@ -90,21 +91,44 @@ def clean_label_id(val):
         return val.split(',')[0].strip()
     return None
 
-def get_labelids_from_df(df:pd.DataFrame) -> List[Optional[str]] :
+def fetch_color_code(label_id: str, access_token: str) -> str:
     """
-    This function gets label ids from labelIds column if label id exists and returns list of label ids
+    Fetches the colorCode for a given labelId from the Baubuddy API.
+    Returns None if not found or request fails.
     """
+    url = f"https://api.baubuddy.de/dev/index.php/v1/labels/{label_id}"
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
 
-    if 'labelIds' not in df.columns:
-        raise ValueError("DataFrame must contain a 'labelIds' column.")
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        if isinstance(data, list) and len(data) > 0:
+            return data[0].get("colorCode")
+    except Exception as e:
+        print(f"Failed to fetch colorCode for labelId {label_id}: {e}")
 
-    # extract label ids from labelIds column with clean operation
-    label_ids = df['labelIds'].dropna().apply(clean_label_id)
+    return None
 
-    # get label ids as a list after clean opearation
-    unique_label_ids = label_ids.dropna().unique()
+def fetch_and_add_color_codes(df:pd.DataFrame) -> pd.DataFrame :
+    """
+    This function fetches color codes from external api using label id and adds color code to new column.
+    """
+    if not df.empty:
+        df['colorCode'] = None
 
+    for idx, row in df.iterrows():
+        label_ids_raw = row['labelIds']
 
-    return list(unique_label_ids)
+        if pd.notna(label_ids_raw):
+            label_id = clean_label_id(label_ids_raw)
+            if label_id:
+                color_code = fetch_color_code(label_id, get_access_token())
+                if color_code:
+                    df.at[idx, 'colorCode'] = color_code
+
+    return df
 
 
