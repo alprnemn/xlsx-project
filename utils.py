@@ -4,6 +4,8 @@ import json
 import pandas as pd
 import requests
 from typing import List, Optional
+
+from openpyxl.styles.fills import PatternFill
 from openpyxl.worksheet.worksheet import Worksheet
 
 from cfg import config
@@ -197,7 +199,6 @@ def upload_csv_and_get_df_from_server(filepath: str, url: str = "http://localhos
 
         return df
 
-
 def color_by_hu(hu_date_str):
     try:
         hu_date = datetime.strptime(hu_date_str, "%Y-%m-%d")
@@ -219,13 +220,27 @@ def add_headers_to_excel_sheet(ws: Worksheet, args: List[str]):
     ws.append(headers)
     return ws, headers
 
-def create_excel_sheet_with_df(df:pd.DataFrame,ws:Worksheet,args:List[str]) -> Worksheet:
+def create_excel_sheet_with_df(df: pd.DataFrame, ws: Worksheet, args: argparse.Namespace) -> Worksheet:
     """
-    Writes the DataFrame content into the worksheet row by row.
+    Appends DataFrame rows to the worksheet and colors each row based on the 'hu' column.
+
+    Row color is determined by the 'color_by_hu' function. Only applied if args.colored is True.
     """
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         excel_row = [row.get("rnr", "")]
-        for key in args:
+        hu_value = row.get("hu", "")
+
+        for key in args.keys:
             excel_row.append(row.get(key, ""))
+
         ws.append(excel_row)
+
+        if args.colored:
+            color = color_by_hu(hu_value)
+            if color:
+                fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+                for cell in ws[ws.max_row]:
+                    cell.fill = fill
+
     return ws
+
