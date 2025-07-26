@@ -1,4 +1,8 @@
-from utils import parse_args, upload_csv_and_get_df_from_server
+from datetime import datetime
+
+from openpyxl.workbook.workbook import Workbook
+from utils import parse_args, upload_csv_and_get_df_from_server, add_headers_to_excel_sheet, create_excel_sheet_with_df
+
 
 def main():
 
@@ -8,7 +12,18 @@ def main():
     # get clean dataframe from server
     df = upload_csv_and_get_df_from_server("vehicles.csv")
 
-    print(df.info())
+    # create worksheet
+    wb = Workbook()
+    ws = wb.active
+
+    # add headers to sheet
+    ws, headers = add_headers_to_excel_sheet(ws, args.keys)
+
+    # writes df rows into excel sheet
+    ws = create_excel_sheet_with_df(df, ws, args.keys)
+
+    wb.save(f"vehicles_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx")
+
 
 if __name__ == "__main__":
     main()

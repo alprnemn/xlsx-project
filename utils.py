@@ -1,10 +1,11 @@
 import argparse
 from datetime import datetime
 import json
-
 import pandas as pd
 import requests
-from typing import Dict, List, Optional
+from typing import List, Optional
+from openpyxl.worksheet.worksheet import Worksheet
+
 from cfg import config
 
 _token_cache = {
@@ -195,3 +196,36 @@ def upload_csv_and_get_df_from_server(filepath: str, url: str = "http://localhos
         df = df.sort_values("gruppe")
 
         return df
+
+
+def color_by_hu(hu_date_str):
+    try:
+        hu_date = datetime.strptime(hu_date_str, "%Y-%m-%d")
+        delta = (datetime.today() - hu_date).days
+        if delta <= 90:
+            return "FF007500"
+        elif delta <= 365:
+            return "FFFFA500"
+        else:
+            return "FFb30000"
+    except:
+        return None
+
+def add_headers_to_excel_sheet(ws: Worksheet, args: List[str]):
+    """
+    Adds headers to the Excel worksheet.
+    """
+    headers = ["rnr"] + args
+    ws.append(headers)
+    return ws, headers
+
+def create_excel_sheet_with_df(df:pd.DataFrame,ws:Worksheet,args:List[str]) -> Worksheet:
+    """
+    Writes the DataFrame content into the worksheet row by row.
+    """
+    for idx, row in df.iterrows():
+        excel_row = [row.get("rnr", "")]
+        for key in args:
+            excel_row.append(row.get(key, ""))
+        ws.append(excel_row)
+    return ws
