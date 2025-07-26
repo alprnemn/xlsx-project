@@ -5,9 +5,8 @@ import requests
 import io
 from utils import (fetch_df_from_external_api,
                    concat_and_filter_dataframes,
-                   get_labelids_from_df,
                    get_access_token,
-                   get_color_codes_using_labelids, fetch_and_add_color_codes
+                   fetch_and_add_color_codes
                    )
 
 

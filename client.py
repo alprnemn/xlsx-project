@@ -1,22 +1,14 @@
-import json
-
-import pandas as pd
-import requests
-
+from utils import parse_args, upload_csv_and_get_df_from_server
 
 def main():
 
-    with open("vehicles.csv", "rb") as f:
-        try:
-            res = requests.post("http://localhost:8000/upload", files={"file": f})
-            data = res.json()
-            data = json.loads(data['data'])
-            for i in data:
-                print(i)
-                print("---------")
-            print(len(data))
-        except Exception as e:
-            RuntimeError(e)
+    # get parameters from comand line if args are valid
+    args = parse_args()
+
+    # get clean dataframe from server
+    df = upload_csv_and_get_df_from_server("vehicles.csv")
+
+    print(df.info())
 
 if __name__ == "__main__":
     main()

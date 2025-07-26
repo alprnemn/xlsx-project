@@ -1,4 +1,7 @@
-import logging
+import argparse
+from datetime import datetime
+import json
+
 import pandas as pd
 import requests
 from typing import Dict, List, Optional
@@ -8,7 +11,9 @@ _token_cache = {
     "access_token": None,
 }
 
+_columns = ["rnr","gruppe","kurzname","langtext","info","lagerort","labelIds","hu"]
 
+# server.py
 def get_access_token() -> str :
     """
     Returns a cached access token or fetches a new one if not cached.
@@ -91,11 +96,14 @@ def clean_label_id(val):
         return val.split(',')[0].strip()
     return None
 
-def fetch_color_code(label_id: str, access_token: str) -> str:
+def fetch_color_code(label_id: str, access_token: str) -> Optional[str]:
     """
     Fetches the colorCode for a given labelId from the Baubuddy API.
     Returns None if not found or request fails.
     """
+
+    if not label_id:
+        return None
     url = f"https://api.baubuddy.de/dev/index.php/v1/labels/{label_id}"
     headers = {
         "Authorization": f"Bearer {access_token}"
@@ -107,8 +115,8 @@ def fetch_color_code(label_id: str, access_token: str) -> str:
         data = response.json()
         if isinstance(data, list) and len(data) > 0:
             return data[0].get("colorCode")
-    except Exception as e:
-        print(f"Failed to fetch colorCode for labelId {label_id}: {e}")
+    except requests.exceptions.RequestException as e:
+        print(f"Request error for labelId {label_id}: {e}")
 
     return None
 
@@ -132,3 +140,58 @@ def fetch_and_add_color_codes(df:pd.DataFrame) -> pd.DataFrame :
     return df
 
 
+# client.py
+def parse_args():
+    """
+    This function parses arguments from the command line and validates:
+    - No duplicate keys
+    - All keys must be in _columns
+    Returns parsed arguments.
+    """
+    parser = argparse.ArgumentParser(
+        prog='Client',
+        description='Client parser to make excel table',
+    )
+    parser.add_argument("-k", "--keys", nargs="*", default=[])
+    parser.add_argument("-c", "--colored", action="store_true")
+
+    args = parser.parse_args()
+
+    # Check for duplicate keys
+    seen = set()
+    duplicates = set()
+    for key in args.keys:
+        if key in seen:
+            duplicates.add(key)
+        seen.add(key)
+
+    if duplicates:
+        parser.error(f"Duplicate keys found: {', '.join(duplicates)}")
+
+    # Check for invalid keys
+    invalid = [key for key in args.keys if key not in _columns]
+    if invalid:
+        parser.error(f"Invalid keys: {', '.join(invalid)}. Valid keys are: {', '.join(_columns)}")
+
+    return args
+
+def upload_csv_and_get_df_from_server(filepath: str, url: str = "http://localhost:8000/upload") -> pd.DataFrame:
+    """
+    Uploads a CSV file to a given REST API endpoint and parses the JSON response into a pandas DataFrame.
+    """
+    with open(filepath, "rb") as f:
+        res = requests.post(url, files={"file": f})
+        res.raise_for_status()
+        data = res.json()
+        if isinstance(data, dict) and 'data' in data:
+            parsed = json.loads(data['data'])
+        else:
+            parsed = data
+
+        # convert dataframe parsed json data
+        df = pd.DataFrame(parsed)
+
+        # sort values by gruppe
+        df = df.sort_values("gruppe")
+
+        return df
