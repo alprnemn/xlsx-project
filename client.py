@@ -21,7 +21,7 @@ def main():
     ws = create_excel_sheet_with_df(df, ws, args)
 
     #save excel sheet '.xlsx' format
-    wb.save(f"vehicles_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.xlsx")
+    wb.save(f"vehicles_{datetime.today().date().isoformat()}.xlsx")
 
 
 if __name__ == "__main__":

@@ -4,10 +4,9 @@ import json
 import pandas as pd
 import requests
 from typing import List, Optional
-
 from openpyxl.styles.fills import PatternFill
+from openpyxl.styles import Font
 from openpyxl.worksheet.worksheet import Worksheet
-
 from cfg import config
 
 _token_cache = {
@@ -29,6 +28,7 @@ def get_access_token() -> str :
         "username": config["USERNAME"],
         "password": config["PASSWORD"]
     }
+
     headers = {
         "Authorization": f"Basic {config['BASIC_AUTH_TOKEN']}",
         "Content-Type": "application/json"
@@ -212,6 +212,16 @@ def color_by_hu(hu_date_str):
     except:
         return None
 
+def clean_hex_color(color: str) -> str:
+    """
+    Removes the '#' prefix from a hex color code if present.
+
+    Example:
+        "#0000FF" -> "0000FF"
+        "00FF00" -> "00FF00"
+    """
+    return color.lstrip('#')
+
 def add_headers_to_excel_sheet(ws: Worksheet, args: List[str]):
     """
     Adds headers to the Excel worksheet.
@@ -229,18 +239,30 @@ def create_excel_sheet_with_df(df: pd.DataFrame, ws: Worksheet, args: argparse.N
     for _, row in df.iterrows():
         excel_row = [row.get("rnr", "")]
         hu_value = row.get("hu", "")
+        color_code = row.get('colorCode',None)
 
         for key in args.keys:
             excel_row.append(row.get(key, ""))
 
         ws.append(excel_row)
+        # Get the last appended row
+        current_row = ws[ws.max_row]
 
+        # if -c flag is true colors background entire row
         if args.colored:
             color = color_by_hu(hu_value)
             if color:
                 fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
-                for cell in ws[ws.max_row]:
+                for cell in current_row:
                     cell.fill = fill
+
+        # Font color by labelIds if labelIds exists in args
+        if 'labelIds' in args.keys and color_code:
+            font_color = clean_hex_color(color_code)
+            font = Font(color=font_color)
+            for cell in current_row:
+                cell.font = font
+
 
     return ws
 
